@@ -86,7 +86,7 @@ function buildAction (logEvent, payload, index) {
   return {
     index: {
       _index: index,
-      _type: index,
+      _type: payload.logGroup,
       _id: logEvent.id
     }
   }
@@ -108,11 +108,18 @@ function buildSource (logEvent, payload, hasPipeline) {
 
 function transform (payload, hasPipeline) {
   let bulkRequestBody = ''
-  const index = payload.logGroup
+  payload.logEvents.forEach(logEvent => {
+    let timestamp = new Date(1 * logEvent.timestamp)
+    const index = payload.logGroup
     .replace(/\W+|_+/g, '-')
     .replace(/^-/, '')
     .toLowerCase()
-  payload.logEvents.forEach(logEvent => {
+    + '-' +                      // Add logGroup to indexName
+    'cwl-' + timestamp.getUTCFullYear() +             //year
+    '.' +
+    ('0' + (timestamp.getUTCMonth() + 1)).slice(-2) + //month
+    '.' +
+    ('0' + timestamp.getUTCDate()).slice(-2)          // day
     bulkRequestBody += [
       JSON.stringify(buildAction(logEvent, payload, index)),
       JSON.stringify(buildSource(logEvent, payload, hasPipeline))
